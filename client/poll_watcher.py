@@ -7,7 +7,7 @@ def watch(target : Path, onChange):
     """
     Periodically poll a directory and check for changes. When a change is detected, call onChange
     """
-    tree = None
+    tree = {}
     while True:
         new_tree = walktree(str(target.absolute().resolve()))
         if tree != None:
