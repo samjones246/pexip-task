@@ -18,6 +18,9 @@ def watch(target : Path, onChange):
         time.sleep(interval)
 
 def walktree(target):
+    """
+    Recursively build a tree (as dict) to represent the target directory 
+    """
     tree = {}
     for f in os.listdir(target):
         path = os.path.join(target, f)
@@ -29,6 +32,10 @@ def walktree(target):
     return tree
 
 def detect_changes(old, new):
+    """
+    Detect changes between two snapshots of a directory tree (old and new)
+    Return three dictionaries, containing the files which have been added, removed and changed respectively
+    """
     added = {}
     removed = {}
     changed = {}
