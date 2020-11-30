@@ -1,5 +1,6 @@
 import os
 import time
+from stat import S_ISDIR
 from pathlib import Path
 interval = 1
 def watch(target : Path, onChange):
@@ -8,7 +9,7 @@ def watch(target : Path, onChange):
     """
     tree = None
     while True:
-        new_tree = dict([(f.name, f) for f in os.scandir(str(target))])
+        new_tree = walktree(str(target.absolute().resolve()))
         if tree != None:
             added, removed, changed = detect_changes(tree, new_tree)
             if added or removed or changed:
@@ -16,19 +17,35 @@ def watch(target : Path, onChange):
         tree = new_tree
         time.sleep(interval)
 
-def detect_changes(old : dict, new : dict):
-    added = []
-    removed = []
-    changed = []
-    for fname, f in old.items():
-        if fname not in new:
-            removed.append(fname)
-
-    for fname, f in new.items():
-        if fname not in old:
-            added.append(fname)
+def walktree(target):
+    tree = {}
+    for f in os.listdir(target):
+        path = os.path.join(target, f)
+        mode = os.stat(path).st_mode
+        if S_ISDIR(mode):
+            tree[path] = walktree(path)
         else:
-            if time.time() - os.stat(f.path).st_mtime <= interval:
-                changed.append(fname)
+            tree[path] = None
+    return tree
+
+def detect_changes(old, new):
+    added = {}
+    removed = {}
+    changed = {}
+    for fname, children in old.items():
+        if fname not in new:
+            removed[fname] = children
+
+    for fname, children in new.items():
+        if fname not in old:
+            added[fname] = children
+        else:
+            if children is not None:
+                added_c, removed_c, changed_c = detect_changes(old[fname], children)
+                added.update(added_c)
+                removed.update(removed_c)
+                changed.update(changed_c)
+            elif time.time() - os.stat(fname).st_mtime <= interval:
+                changed[fname] = children
     
     return (added, removed, changed)
