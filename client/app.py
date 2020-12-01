@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse
 import poll_watcher as watcher
 import requests
+import json
 
 def main():
     parser = argparse.ArgumentParser(description="Keep the contents of a folder synchronised with a server.")
@@ -10,6 +11,8 @@ def main():
                                                 Can be relative to your current working directory or absolute.")
     parser.add_argument("--host", type=str, help="Location of the server to synchronise to (default: localhost)",
                         default="localhost")
+    parser.add_argument("--port", type=int, help="Port to connect to the server through (default: 5000",
+                        default=5000)
     args = parser.parse_args()
     target = Path(args.path)
 
@@ -26,8 +29,10 @@ def main():
         if changed:
             print("Changed:")
             print(changed)
-        res = requests.post(args.host, data={"added":added, "removed":removed, "changed":changed})
-        print(res.data)
+        res = requests.post("http://" + args.host + ":" + str(args.port), 
+                            data=json.dumps({"added":added, "removed":removed, "changed":changed}),
+                            headers={"Content-type": "application/json"})
+        print(res.text)
 
     watcher.watch(target, sync)
 
