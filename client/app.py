@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 import argparse
 import poll_watcher as watcher
+import requests
 
 def main():
     parser = argparse.ArgumentParser(description="Keep the contents of a folder synchronised with a server.")
@@ -15,18 +16,20 @@ def main():
     if not target.exists():
         raise ValueError(f"invalid path: {str(target)}")
 
-    watcher.watch(target, sync)
+    def sync(added, removed, changed):
+        if added:
+            print("Added:")
+            print(added)
+        if removed:
+            print("Removed:")
+            print(removed)
+        if changed:
+            print("Changed:")
+            print(changed)
+        res = requests.post(args.host, data={"added":added, "removed":removed, "changed":changed})
+        print(res.data)
 
-def sync(added, removed, changed):
-    if added:
-        print("Added:")
-        print(added)
-    if removed:
-        print("Removed:")
-        print(removed)
-    if changed:
-        print("Changed:")
-        print(changed)
+    watcher.watch(target, sync)
 
 if __name__ == "__main__":
     main()
