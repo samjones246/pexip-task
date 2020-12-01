@@ -2,8 +2,8 @@ import sys
 from pathlib import Path
 import argparse
 import poll_watcher as watcher
-import requests
 import json
+import socket
 
 def main():
     parser = argparse.ArgumentParser(description="Keep the contents of a folder synchronised with a server.")
@@ -29,10 +29,6 @@ def main():
         if changed:
             print("Changed:")
             print(changed)
-        res = requests.post("http://" + args.host + ":" + str(args.port), 
-                            data=json.dumps({"added":added, "removed":removed, "changed":changed}),
-                            headers={"Content-type": "application/json"})
-        print(res.text)
 
     watcher.watch(target, sync)
 
