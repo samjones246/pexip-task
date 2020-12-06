@@ -21,14 +21,15 @@ def walktree(target):
     """
     Recursively build a tree (as dict) to represent the target directory 
     """
-    tree = {}
+    tree = []
     for f in os.listdir(target):
         path = os.path.join(target, f)
         mode = os.stat(path).st_mode
         if S_ISDIR(mode):
-            tree[path] = walktree(path)
+            tree.append((path, "D"))
+            tree += walktree(path)
         else:
-            tree[path] = None
+            tree.append((path, "F"))
     return tree
 
 def detect_changes(old, new):
@@ -36,23 +37,17 @@ def detect_changes(old, new):
     Detect changes between two snapshots of a directory tree (old and new)
     Return three dictionaries, containing the files which have been added, removed and changed respectively
     """
-    added = {}
-    removed = {}
-    changed = {}
-    for fname, children in old.items():
-        if fname not in new:
-            removed[fname] = children
+    added = []
+    removed = []
+    changed = []
+    for f in old:
+        if f not in new:
+            removed.append(f)
 
-    for fname, children in new.items():
-        if fname not in old:
-            added[fname] = children
-        else:
-            if children is not None:
-                added_c, removed_c, changed_c = detect_changes(old[fname], children)
-                added.update(added_c)
-                removed.update(removed_c)
-                changed.update(changed_c)
-            elif time.time() - os.stat(fname).st_mtime <= interval:
-                changed[fname] = children
-    
+    for f in new:
+        if f not in old:
+            added.append(f)
+        elif time.time() - os.stat(f[0]).st_mtime <= interval:
+            changed.append(f)
+
     return (added, removed, changed)

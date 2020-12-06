@@ -2,22 +2,24 @@ import argparse
 import socketserver
 import os
 
-class Handler(socketserver.BaseRequestHandler):
+class Handler(socketserver.StreamRequestHandler):
     def handle(self):
         try:
-            # self.request is the TCP socket connected to the client
-            numfiles = int(self.request.recv(1024))
-            for _ in range(numfiles):
-                changetype, filepath = self.request.recv(1024).decode('utf-8').split(";")
-                if changetype in ["A", "C"]:
-                    with open(os.path.join(self.server.path, filename), 'wb') as f:
-                        rfile = self.rfile.read()
-                        f.write(rfile)
-                elif changetype == "R":
-                    os.remove(os.path.join(self.server.path, filepath))
+            data = tuple(self.request.recv(512).decode('utf-8').split(";"))
+            print(data)
+            changetype, filetype, filepath = data
+            self.request.sendall(b"1")
+            if changetype in ["A", "C"]:
+                if filetype == "D":
+                    os.mkdir(os.path.join(self.server.path, filepath))
+                elif filetype == "F":
+                    with open(os.path.join(self.server.path, filepath), 'wb') as f:
+                        f.write(self.rfile.read())
+            elif changetype == "R":
+                os.remove(os.path.join(self.server.path, filepath))
             print("Success")
         except Exception as e:
-            print("Error: {0}".format(e))
+            print(f"Error: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Update a folder with changes received from a client application")
