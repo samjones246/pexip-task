@@ -5,6 +5,7 @@ import poll_watcher as watcher
 import json
 import socket
 import os
+import time
 
 def main():
     parser = argparse.ArgumentParser(description="Keep the contents of a folder synchronised with a server.")
@@ -21,6 +22,7 @@ def main():
         raise ValueError(f"invalid path: {str(target)}")
 
     def sync(added, removed, changed):
+        startTime = time.time()
         if added:
             print("Added:")
             print(added)
@@ -30,22 +32,39 @@ def main():
         if changed:
             print("Changed:")
             print(changed)
-
+        print("Establishing connection to server...")
         with socket.create_connection((args.host, args.port)) as sock:
+            print("Connection established.")
+            print("Sending number of files...")
             numfiles = len(added) + len(changed) + len(removed)
             sock.sendall(numfiles.to_bytes(2, byteorder='big'))
             for fpath, ftype in added:
-                sock.sendall(f"A;{ftype};{relpath.ljust(255, ' ')}".encode("utf-8"))
+                relpath = os.path.relpath(fpath, target.absolute())
+                filesize = os.stat(fpath).st_size
+                data = f"A;{ftype};{relpath};{filesize}".encode("utf-8")
+                print("Sending %i bytes" % len(data))
+                sock.sendall(data)
                 if ftype == "F":
                     with open(fpath, 'rb') as f:
+                        print("Waiting for server...")
+                        sock.recv(1)
+                        print("Sending file...")
                         sock.sendfile(f)
+                        print("File sent")
             for fpath, ftype in changed:
+                relpath = os.path.relpath(fpath, target.absolute())
                 sock.sendall(f"C;{ftype};{relpath.ljust(255, ' ')}".encode("utf-8"))
+                print("Sent data")
                 if ftype == "F":
                     with open(fpath, 'rb') as f:
+                        sock.recv(1)
                         sock.sendfile(f)
             for fpath, ftype in removed:
+                relpath = os.path.relpath(fpath, target.absolute())
                 sock.sendall(f"R;{ftype};{relpath.ljust(255, ' ')}".encode("utf-8"))
+                print("Sent data")
+        totalTime = time.time() - startTime
+        print(f"Update complete ({totalTime}s)")
 
     watcher.watch(target, sync)
 
