@@ -30,19 +30,22 @@ def main():
         if changed:
             print("Changed:")
             print(changed)
-        for fpath, ftype in added + changed:
-            with socket.create_connection((args.host, args.port)) as sock:
-                relpath = os.path.relpath(fpath, target.absolute())
-                sock.sendall(f"A;{ftype};{relpath}".encode("utf-8"))
-                sock.recv(1)
+
+        with socket.create_connection((args.host, args.port)) as sock:
+            numfiles = len(added) + len(changed) + len(removed)
+            sock.sendall(numfiles.to_bytes(2, byteorder='big'))
+            for fpath, ftype in added:
+                sock.sendall(f"A;{ftype};{relpath.ljust(255, ' ')}".encode("utf-8"))
                 if ftype == "F":
                     with open(fpath, 'rb') as f:
                         sock.sendfile(f)
-        for fpath, ftype in removed:
-            with socket.create_connection((args.host, args.port)) as ali:
-                relpath = os.path.relpath(fpath, target.absolute())
-                ali.sendall(f"R;{ftype};{relpath}".encode("utf-8"))
-                ali.recv(1)
+            for fpath, ftype in changed:
+                sock.sendall(f"C;{ftype};{relpath.ljust(255, ' ')}".encode("utf-8"))
+                if ftype == "F":
+                    with open(fpath, 'rb') as f:
+                        sock.sendfile(f)
+            for fpath, ftype in removed:
+                sock.sendall(f"R;{ftype};{relpath.ljust(255, ' ')}".encode("utf-8"))
 
     watcher.watch(target, sync)
 
