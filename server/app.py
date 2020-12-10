@@ -44,6 +44,7 @@ def main():
     print(f"Starting server at {args.host}:{args.port}, target folder {args.path}...")
     with socketserver.TCPServer((args.host, args.port), Handler) as server:
         server.path = args.path
+        # TODO: Send current contents to client when client starts up
         server.serve_forever()
 
 if __name__ == "__main__":

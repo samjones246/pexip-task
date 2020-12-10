@@ -66,6 +66,7 @@ def main():
         totalTime = time.time() - startTime
         print(f"Update complete ({totalTime}s)")
 
+    # TODO: Get initial contents of server folder at initialisation
     watcher.watch(target, sync)
 
 if __name__ == "__main__":
