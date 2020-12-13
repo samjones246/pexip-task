@@ -25,6 +25,9 @@ class Handler(socketserver.StreamRequestHandler):
                             print("Writing file...")
                             f.write(content)
                             print("Wrote file")
+                elif changetype == "M":
+                    filepath = filepath.split(",")
+                    os.rename(os.path.join(self.server.path, filepath[0]), os.path.join(self.server.path, filepath[1]))
                 elif changetype == "R":
                     os.remove(os.path.join(self.server.path, filepath))
                     print("Removed file")

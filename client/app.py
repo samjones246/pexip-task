@@ -34,9 +34,10 @@ def main():
             sock.sendall(numfiles.to_bytes(2, byteorder='big'))
             for utype, fpath, ftype in updates:
                 if utype == "M":
-                    relpath = os.path.relpath(fpath, target.absolute())
+                    relpath = ",".join([os.path.relpath(fpath[0], target.absolute()), 
+                                        os.path.relpath(fpath[1], target.absolute())])
                 else:
-                    relpath = (os.path.relpath(fpath[0], target.absolute()), os.path.relpath(fpath[1], target.absolute()))
+                    relpath = os.path.relpath(fpath, target.absolute())
                 if utype in ['R', 'M']:
                     filesize = 0
                 else:
