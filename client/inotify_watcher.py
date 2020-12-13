@@ -1,24 +1,31 @@
 import inotify.adapters
 import os
-def watch(target, onChange):
-    i = inotify.adapters.InotifyTree(target)
-    added = []
-    removed = []
-    changed = []
+def watch(target, onChange, ignore_hidden):
+    i = inotify.adapters.InotifyTree(str(target))
+    updates = []
+    utypes = {
+        'IN_CREATE': 'A',
+        'IN_MODIFY': 'C',
+        'IN_DELETE': 'R'
+    }
     for event in i.event_gen():
         if event is None:
-            if added or removed or changed:
-                onChange(added, removed, changed)
-                added = []
-                removed = []
-                changed = []
+            if updates:
+                onChange(updates)
+                updates = []
             continue
-        if 'IN_MODIFY' in event[1]:
-            changed.append((os.path.join(event[2], event[3]), 'D' if 'IN_ISDIR' in event[1] else 'F'))
-        elif 'IN_CREATE' in event[1]:
-            added.append((os.path.join(event[2], event[3]), 'D' if 'IN_ISDIR' in event[1] else 'F'))
-        elif 'IN_DELETE' in event[1]:
-            removed.append((os.path.join(event[2], event[3]), 'D' if 'IN_ISDIR' in event[1] else 'F'))
+        if event[1][0] in utypes:
+            utype = utypes[event[1][0]]
+            fpath = os.path.join(event[2], event[3])
+            ignore = False
+            if ignore_hidden:
+                parts = os.path.relpath(fpath, target).split("/")
+                for part in parts:
+                    if part.startswith("."):
+                        ignore = True
+            if not ignore:
+                ftype = 'D' if 'IN_ISDIR' in event[1] else 'F'
+                updates.append((utype, fpath, ftype))
 
 if __name__ == "__main__":
     watch("src", print)
