@@ -6,7 +6,7 @@ import json
 import socket
 import os
 import time
-
+from stat import S_ISDIR
 def main():
     parser = argparse.ArgumentParser(description="Keep the contents of a folder synchronised with a server.")
     parser.add_argument("path", type=str, help="Path to the folder which should be synchronised.\
@@ -55,7 +55,20 @@ def main():
         totalTime = time.time() - startTime
         print(f"Update complete ({totalTime}s)")
 
-    # TODO: Get initial contents of server folder at initialisation
+    init_contents = []
+    traverse = [str(target.absolute())]
+    for dirpath, dirnames, filenames in os.walk(target.absolute()):
+        if dirpath in traverse:
+            for dirname in dirnames:
+                if not (args.ignore_hidden and dirname.startswith(".")):
+                    fullpath = os.path.join(dirpath, dirname)
+                    traverse.append(fullpath)
+                    init_contents.append(("A", fullpath, "D"))
+            for filename in filenames:
+                if not (args.ignore_hidden and dirname.startswith(".")):
+                    fullpath = os.path.join(dirpath, filename)
+                    init_contents.append(("A", fullpath, "F"))
+    sync(init_contents)
     watcher.watch(target, sync, args.ignore_hidden)
 
 if __name__ == "__main__":

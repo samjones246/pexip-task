@@ -1,6 +1,8 @@
 import argparse
 import socketserver
 import os
+from pathlib import Path
+import shutil
 
 class Handler(socketserver.StreamRequestHandler):
     def handle(self):
@@ -44,10 +46,19 @@ def main():
     parser.add_argument("--port", type=int, help="Port to open the server on (default: 5000)",
                         default=5000)
     args = parser.parse_args()
+    target = Path(args.path)
+    destcontents = os.listdir(target.absolute())
+    if destcontents:
+        print("Destination folder not empty, cleaning up...")
+        for f in destcontents:
+            fullpath = os.path.join(target, f)
+            if os.path.isfile(fullpath):
+                os.remove(fullpath)
+            else:
+                shutil.rmtree(fullpath)
     print(f"Starting server at {args.host}:{args.port}, target folder {args.path}...")
     with socketserver.TCPServer((args.host, args.port), Handler) as server:
         server.path = args.path
-        # TODO: Send current contents to client when client starts up
         server.serve_forever()
 
 if __name__ == "__main__":
