@@ -33,8 +33,12 @@ class Handler(socketserver.StreamRequestHandler):
                     filepath = filepath.split(",")
                     os.rename(os.path.join(self.server.path, filepath[0]), os.path.join(self.server.path, filepath[1]))
                 elif changetype == "R":
-                    os.remove(os.path.join(self.server.path, filepath))
-                    print("Removed file")
+                    if filetype == "F":
+                        os.remove(os.path.join(self.server.path, filepath))
+                        print("Removed file")
+                    elif filetype == "D":
+                        shutil.rmtree(os.path.join(self.server.path, filepath))
+                        print("Removed directory")
             print("Success")
         except Exception as e:
             print(f"Error: {e}")
