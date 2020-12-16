@@ -15,8 +15,8 @@ def main():
                         default="localhost")
     parser.add_argument("--port", type=int, help="Port to connect to the server through (default: 5000)",
                         default=5000)
-    parser.add_argument("--ignore-hidden", type=bool, 
-                        help="Ignore any file or directory whose name starts with a '.' (default: true)",
+    parser.add_argument("--include-hidden", "-a", action="store_false", dest="ignore_hidden",
+                        help="If specified, do not ignore files or directories whose names start with a '.'",
                         default=True)
     args = parser.parse_args()
     target = Path(args.path)
