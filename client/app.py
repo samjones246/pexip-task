@@ -43,6 +43,8 @@ def main():
                 else:
                     filesize = os.stat(fpath).st_size
                 data = f"{utype};{ftype};{relpath};{filesize}".encode("utf-8")
+                print("Waiting for server...")
+                sock.recv(1)
                 print("Sending %i bytes" % len(data))
                 sock.sendall(data)
                 if utype in ['A', 'C'] and ftype == "F":

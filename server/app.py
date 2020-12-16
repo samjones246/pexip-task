@@ -9,7 +9,9 @@ class Handler(socketserver.StreamRequestHandler):
         try:
             numfiles = int.from_bytes(self.request.recv(2), byteorder="big")
             print("Files: " + str(numfiles))
-            for _ in range(numfiles):
+            for _ in range(numfiles): 
+                print("Requesting update info...")
+                self.request.sendall(b'1')
                 data = self.request.recv(1024).decode('utf-8')
                 data = tuple(data.split(";"))
                 print(f"Received: {str(data)} ({len(data)} bytes)")
@@ -20,7 +22,7 @@ class Handler(socketserver.StreamRequestHandler):
                         print("Created directory")
                     elif filetype == "F":
                         with open(os.path.join(self.server.path, filepath), 'wb') as f:
-                            print("Instructing client to send file...")
+                            print("Requesting file contents...")
                             self.request.sendall(b'1')
                             print("Receiving file...")
                             content = self.rfile.read(int(filesize))
