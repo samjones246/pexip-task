@@ -51,17 +51,23 @@ def main():
                         default="0.0.0.0")
     parser.add_argument("--port", type=int, help="Port to open the server on (default: 5000)",
                         default=5000)
+    parser.add_argument("--clean", action="store_true", 
+                        help="If the destination folder is not empty, delete its contents on startup.\
+                              If this option is not specified and a non-empty destination folder is given, the process will fail.")
     args = parser.parse_args()
     target = Path(args.path)
     destcontents = os.listdir(target.absolute())
     if destcontents:
-        print("Destination folder not empty, cleaning up...")
-        for f in destcontents:
-            fullpath = os.path.join(target, f)
-            if os.path.isfile(fullpath):
-                os.remove(fullpath)
-            else:
-                shutil.rmtree(fullpath)
+        if args.clean:
+            print("Destination folder not empty, cleaning up...")
+            for f in destcontents:
+                fullpath = os.path.join(target, f)
+                if os.path.isfile(fullpath):
+                    os.remove(fullpath)
+                else:
+                    shutil.rmtree(fullpath)
+        else:
+            raise Exception("Destination folder not empty and --clean not specified")
     print(f"Starting server at {args.host}:{args.port}, target folder {args.path}...")
     with socketserver.TCPServer((args.host, args.port), Handler) as server:
         server.path = args.path
