@@ -77,7 +77,26 @@ By default, hidden files and directories (those with names starting with a '.') 
 If the source folder is not empty when you start the client, it should immediately upload the current contents to the server. After this, any changes made in the source folder will be detected and uploaded to the server.
 
 ## Approach
-### Client
-### Server
+There were two main implementation decisions to consider with this task: how to watch a directory for changes, and how to send those changes over IP to a server. I considered a few options for each of these, but settled on the ones which I thought would be most efficient.
 
-## Future Work
+For monitoring a directory, I first tried the simple approach of polling the directory at a fixed interval and comparing it with a snapshot taken at the previous poll. While this had the advantage of not requiring any third party libraries and being easy to implement, it would not have scaled well, and it meant that there was always a delay between a change being made and that change being detected by the application. I then decided to take advantage of being given free choice over which operating system to develop for, and moved to a new approach which uses **inotify** from the Linux kernel. Inotify can be used to place a watch on a directory. Whenever a change is made in the directory, the watch fires an event describing the change. This is a much nicer approach, which isn't constantly doing unnecessary work when no changes are being made and can respond immediately when changes are made. While is would be possible to implement this approach without any external packages, there is an inotify python package which provides an interface to inotify and saves me some legwork.
+
+For uploading the changes, I briefly considered using a protocol such as HTTP or FTP, but both of these come with overhead which isn't necessary for this application and would really just slow down the process. Instead, I went with the lowish level approach of sockets, allowing me to send raw data without any headers so that I can more easily minimise the amount of data that I need to transfer. Below is an outline of the data transfer process between client and server:
+ - Client establishes connection to server
+ - Client sends a single int, telling server how many updates will be sent
+ - Server receives this number and begins a loop:
+   - Server sends a single byte to the client to say "Ready to receive update info"
+   - Client receives this byte and replies with info for the next update to be sent. This packet contains the following pieces of information, each seperated by a semi-colon:
+     - Update type, which is either A (file added), R (file removed), C (file changed), or M (file moved or renamed).
+     - File type, which is either F (regular file) or D (directory)
+     - File path (including name) relative to the source/destination folder. For update type M, this is instead tuple of the form (*old path*, *new path*).
+     - Filesize in bytes
+    - Server receives update info and takes action according to the update type:
+      - **A (file added)** - If the file type is directory, simply create the directory. Otherwise, the server needs the content for the newly created file. The client will be waiting for the signal to send this content, so send a single byte back to tell the client to start sending. Then, receive a number of bytes equal to the size of the new file.
+      - **R (file removed)** - Delete the file at the specified address. If the file type is directory, recurseively delete the contents of the directory as well as the directory itself.
+      - **C (file changed)** - Receive new contents for the specified file and overwrite old contents. This uses the same process as for adding a new file - signal the client to start sending the file, and then receive *filesize* bytes.
+      - **M (file moved)** - Move the file/directory at located at the specified *old path* to *new path*.
+  - Once the loop has finished (all updates have been received and processed), the connection is ended.
+
+This process is initiated immediately when the client is started in order to synchronise the initial contents of the source folder, and then again whenever am update is detected.
+## Shortcomings
