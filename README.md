@@ -76,6 +76,8 @@ By default, hidden files and directories (those with names starting with a '.') 
 
 If the source folder is not empty when you start the client, it should immediately upload the current contents to the server. After this, any changes made in the source folder will be detected and uploaded to the server.
 
+---
+
 ## Approach
 There were two main implementation decisions to consider with this task: how to watch a directory for changes, and how to send those changes over IP to a server. I considered a few options for each of these, but settled on the ones which I thought would be most efficient.
 
@@ -98,5 +100,18 @@ For uploading the changes, I briefly considered using a protocol such as HTTP or
       - **M (file moved)** - Move the file/directory at located at the specified *old path* to *new path*.
   - Once the loop has finished (all updates have been received and processed), the connection is ended.
 
-This process is initiated immediately when the client is started in order to synchronise the initial contents of the source folder, and then again whenever am update is detected.
+This process is initiated immediately when the client is started in order to synchronise the initial contents of the source folder, and then again whenever an update is detected.
+
+---
+
 ## Shortcomings
+There are a few aspects of this application (of which I am aware) which could definitely be improved. 
+
+Firstly, there is a bug with the inotify python package relating to recreated directories. If a sub-directory of the watched directory is deleted and then a new directory is created with the same name as the deleted one, changes in that new directory will not be detected. This is due to the watch on the old directory not beign removed properly, so when the package tries to create a watch on the new directory it thinks it is already monitoring it and so throws and error and does not create the new watch. This will hopefully one day be resolved by the maintainers of the package, but there are issues relating to this bug on the github for the package which are over a year old, so this fix may not come any time soon. Alternatively there way be some kind of workaround, but I was unable to find or come up with one which doesn't involve rewriting a large amount of functionality which is provided by the package. Another possible solution would be to abandon the package and interact directly with inotify instead, by executing commands through python with the subprocess module or similar. Perhaps the optimal solution would be to fork the inotify repository, fix the bug and submit a pull request with the fix, but I deemed this to be beyond the scope of this task. 
+
+Secondly, the initialisation process could be improved by detecting the differences between the source and destination folders at startup and sending only the necessary updates to get them synchronised. This would remove the need for the destination folder to be empty at startup. This could be achieved to an extent by simply having the server send a directory listing at startup, but this does not account for differences in the content of the files. In order to detect such differences, the server would need to send every file in its entirety so that a byte-by-byte comparison between the copies of the files on the client and those on the server could be made, which is then no more efficient than just sending the contents of the client folder. A possible alternative would be to hash every file and compare the hashes instead. This would involve less data being sent over the network, but would be computationally expensive for both client and server, especially with large files. 
+
+Finally, the process of synchronising changes to the content of a file could be optimised by detecting which bytes in the file have changed and then sending only those bytes, along with sufficient information for the server to update the bytes at the correct positions. This could be done by keeping a cache of file contents, and then comparing the contents of files which are updated with their cached versions to find the locations of changes. After that, send the updates and update the cached files. This could greatly reduce the volume of data transfer when small changes are made to large files, but would increase the storage or memory requirements of the application depending on how the cache is implemented.
+
+## Conclusion
+This was a fun task, which I ended up spending around 20 hours on in total including the time spent doing research and such (a little over the 3 hours suggested). I'd defintely like to come back to it at some point to see if I can sort out the issues I mentioned in the previous section.
